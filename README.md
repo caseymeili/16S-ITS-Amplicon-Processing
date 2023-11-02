@@ -3,6 +3,7 @@ Pipelines for processing 16S and ITS amplicon data using mothur
 
 Both ITS and 16S data processed using mothur v.1.48.0, downloaded from https://mothur.org. Pipeline adapted from mothur MiSeq SOP (accessed October 2023), https://mothur.org/wiki/miseq_sop/.
 
+
 **Required Files**
 
 16S data processing utilizes 
@@ -11,6 +12,7 @@ Both ITS and 16S data processed using mothur v.1.48.0, downloaded from https://m
 
 ITS data processing utilizes
 - UNITE reference database (mothur release for fungi version no. 9) obtained from: https://doi.plutof.ut.ee/doi/10.15156/BIO/2938075
+
 
 
 **References**
