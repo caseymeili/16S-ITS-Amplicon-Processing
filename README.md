@@ -19,6 +19,6 @@ Schloss, P.D., et al., Introducing mothur: Open-source, platform-independent, co
 
 Kozich JJ, Westcott SL, Baxter NT, Highlander SK, Schloss PD. (2013): Development of a dual-index sequencing strategy and curation pipeline for analyzing amplicon sequence data on the MiSeq Illumina sequencing platform. Applied and Environmental Microbiology. 79(17):5112-20.
 
-Abarenkov, Kessy; Zirk, Allan; Piirmann, Timo; Pöhönen, Raivo; Ivanov, Filipp; Nilsson, R. Henrik; Kõljalg, Urmas (2023): UNITE mothur release for Fungi. Version 18.07.2023. UNITE Community. https://doi.org/10.15156/BIO/2938075
+Abarenkov, Kessy; Zirk, Allan; Piirmann, Timo; Pöhönen, Raivo; Ivanov, Filipp; Nilsson, R. Henrik; Kõljalg, Urmas (2023): UNITE mothur release for Fungi. Version 18.07.2023. UNITE Community. doi: 10.15156/BIO/2938075
 
 
