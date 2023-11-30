@@ -1,0 +1,86 @@
+# 16S Data Processing
+# mothur v.1.48.0
+# adapted from MiSeq SOP (accessed October 2023), https://mothur.org/wiki/miseq_sop/
+# standard V4 primers
+
+####################################################################################
+# combine fasta files by sample
+cat 2_16S_S2_R1_001.fastq.gz 3_16S_S3_R1_001.fastq.gz > 2_16S_S2_R1_001.fastq.gz
+cat 2_16S_S2_R2_001.fastq.gz 3_16S_S3_R2_001.fastq.gz > 2_16S_S2_R2_001.fastq.gz
+cat 4_16S_S4_R1_001.fastq.gz 5_16S_S5_R1_001.fastq.gz > 4_16S_S4_R1_001.fastq.gz
+cat 4_16S_S4_R2_001.fastq.gz 5_16S_S5_R2_001.fastq.gz > 4_16S_S4_R2_001.fastq.gz
+
+ml mothur/1.48.0
+ml vsearch/040218
+
+# set processors
+set.current(processors=8)
+
+# combine forward and reverse reads under single sample name
+# input file created according to mothur make.file format (sample-name forward-name reverse-name)
+make.contigs(file=rodent.16S.txt)
+summary.seqs(fasta=rodent.16S.trim.contigs.fasta, count=rodent.16S.contigs.count_table)
+
+# screen to remove sequences longer than 300, ambiguous bases, or more than 8 homopolymers
+screen.seqs(fasta=rodent.16S.trim.contigs.fasta, count=rodent.16S.contigs.count_table, maxambig=0, minlength= maxlength=300, maxhomop=8)
+summary.seqs(fasta=rodent.16S.trim.contigs.good.fasta, count=rodent.16S.contigs.good.count_table)
+
+# remove duplicate sequences, this generates a names file
+unique.seqs(fasta=rodent.16S.trim.contigs.good.fasta, count=rodent.16S.contigs.good.count_table)
+summary.seqs(fasta=rodent.16S.trim.contigs.good.unique.fasta, count=rodent.16S.trim.contigs.good.count_table)
+
+# create database customized to region of interest
+# silva database (silva.nr_v138_1.align & silva.nr_v138_1.tax) obtained from mothur silva reference files, release 138.1
+# positions corresponding to V4 region with primers
+pcr.seqs(fasta=silva.nr_v138_1.align, taxonomy=silva.nr_v138_1.tax, start=11895, end=25318, keepdots=F)
+rename.file(input=silva.nr_v138_1.pcr.align, new=silva.v4.fasta)
+
+# align to database file
+align.seqs(fasta=rodent.16S.trim.contigs.good.unique.fasta, reference=silva.v4.fasta)
+summary.seqs(fasta=rodent.16S.trim.contigs.good.unique.align, count=rodent.16S.trim.contigs.good.count_table)
+
+# remove sequences outside of start/end positions, usually due to poor alignment or non specific amplification
+screen.seqs(fasta=rodent.16S.trim.contigs.good.unique.align, count=rodent.16S.trim.contigs.good.count_table, start=1968, end=11550)
+summary.seqs(fasta=rodent.16S.trim.contigs.good.unique.good.align, count=rodent.16S.trim.contigs.good.good.count_table)
+
+# remove overhangs (probably not necessary since sequencing was paired-end)
+filter.seqs(fasta=rodent.16S.trim.contigs.good.unique.good.align, vertical=T, trump=.)
+
+# remove redundancy 
+unique.seqs(fasta=rodent.16S.trim.contigs.good.unique.good.filter.fasta, count=rodent.16S.trim.contigs.good.good.count_table)
+
+# precluster allowing for up to 2 differences between sequences
+pre.cluster(fasta=rodent.16S.trim.contigs.good.unique.good.filter.unique.fasta, count=rodent.16S.trim.contigs.good.unique.good.filter.count_table, diffs=2)
+
+# remove chimeras using VSEARCH algorithm 
+chimera.vsearch(fasta=rodent.16S.trim.contigs.good.unique.good.filter.unique.precluster.fasta, count=rodent.16S.trim.contigs.good.unique.good.filter.unique.precluster.count_table, dereplicate=t)
+summary.seqs(fasta=rodent.16S.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.fasta, count=rodent.16S.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.count_table)
+
+# classify sequences using reference files
+# RDP reference files (trainset18_062020.pds.fasta & trainset18_062020.pds.tax) were obtained from mothur RPD reference files version 18 (https://mothur.org/wiki/rdp_reference_files/)
+classify.seqs(fasta=rodent.16S.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.fasta, count=rodent.16S.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.count_table, reference=trainset18_062020.pds.fasta, taxonomy=trainset18_062020.pds.tax)
+
+# remove unwanted sequences (18S, archaea, chloroplasts, mitochondria, unknown)
+remove.lineage(fasta=rodent.16S.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.fasta, count=rodent.16S.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.count_table, taxonomy=rodent.16S.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.pds.wang.taxonomy, taxon=Chloroplast-Mitochondria-unknown-Archaea-Eukaryota)
+summary.tax(taxonomy=rodent.16S.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.pds.wang.pick.taxonomy, count=rodent.16S.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.pick.count_table)
+
+# creating OTUs
+# default cutoff used for clustering (0.03)
+dist.seqs(fasta=rodent.16S.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.pick.fasta, cutoff=0.03)
+cluster(column=rodent.16S.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.pick.dist, count=rodent.16S.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.pick.count_table)
+
+# determine how many sequences are in each OTU
+make.shared(list=rodent.16S.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.pick.opti_mcc.list, count=rodent.16S.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.pick.count_table, label=0.03)
+
+# consensus taxonomy for each OTU
+# taxonomy file is the output of the classify.seqs command
+classify.otu(list=rodent.16S.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.pick.opti_mcc.list, count=rodent.16S.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.pick.count_table, taxonomy=rodent.16S.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.pds.wang.taxonomy, label=0.03)
+
+# get number of each OTU in a sample
+count.groups(count=rodent-16S.trim.contigs.good.unique.good.filter.unique.precluster.pick.count_table)
+
+# determine coverage (Good's coverage index)
+summary.single(shared=rodent.16S.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.pick.opti_mcc.shared, calc=coverage)
+
+# classify to genus level for pie charts
+classify.seqs(fasta=rodent.16S.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.fasta, count=rodent.16S.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.count_table, reference=trainset18_062020.pds.fasta, taxonomy=trainset18_062020.pds.tax, printlevel=6)
